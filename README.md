@@ -324,3 +324,981 @@
 </details>
 
 <br>
+
+## 기본 데이터 구조
+### user
+```ts
+interface User {
+  id: string;
+  password: string;
+  name: string;
+  picture: string;
+  chats: string[]; // chat id만 속합니다.
+}
+```
+### chat
+```ts
+interface Chat {
+  id: string;
+  name: string;
+  isPrivate: boolean;
+  users: string[];
+  messages: Message[]; // message 객체가 속합니다.
+  
+  updatedAt: Date;
+}
+```
+### message
+```ts
+interface Message {
+  id: string;
+  text: string;
+  userId: string;
+
+  createdAt: Date;
+}
+```
+## 회원
+
+### 회원가입
+
+사용자가 `id`에 종속되어 회원가입합니다.
+
+- 사용자 비밀번호는 암호화해 저장합니다.
+- 프로필 이미지는 url or base64 형식이어야 합니다.
+- 프로필 이미지는 1MB 이하여야 합니다.
+
+```curl
+curl https://fastcampus-chat.net/signup
+  \ -X 'POST'
+```
+
+요청 데이터 타입 및 예시:
+
+```ts
+interface RequestBody {
+  id: string // 사용자 아이디 (필수!, 영어와 숫자만)
+  password: string // 사용자 비밀번호, 5자 이상 (필수!)
+  name: string // 사용자 이름, 20자 이하 (필수!)
+  picture?: string // 사용자 이미지(url or base64, under 1MB)
+}
+```
+
+```json
+{
+  "id": "abcd",
+  "password": "********",
+  "name": "GyoHeon",
+  "picture": "https://avatars.githubusercontent.com/u/66263916?v=4"
+}
+```
+
+응답 데이터 타입 및 예시:
+
+```ts
+interface ResponseValue {
+  message: title
+}
+```
+
+```json
+{
+  "message": "User created"
+}
+```
+
+### id 중복 체크
+
+`id` 중복 체크를 합니다.
+
+```curl
+curl https://fastcampus-chat.net/check/id
+  \ -X 'POST'
+```
+
+요청 데이터 타입 및 예시:
+
+```ts
+interface RequestBody {
+  id: string // 사용자 아이디 (필수!, 영어와 숫자만)
+}
+```
+
+```json
+{
+  "id": "abcd",
+}
+```
+
+응답 데이터 타입 및 예시:
+
+```ts
+interface ResponseValue {
+  isDuplicated: boolean
+}
+```
+
+```json
+{
+  "isDuplicated": false
+}
+```
+
+### 로그인
+
+- 발급된 `accessToken`은 7일 후 만료됩니다.
+
+```curl
+curl https://fastcampus-chat.net/login
+  \ -X 'POST'
+```
+
+요청 데이터 타입 및 예시:
+
+```ts
+interface RequestBody {
+  id: string // 사용자 아이디 (필수!)
+  password: string // 사용자 비밀번호 (필수!)
+}
+```
+
+```json
+{
+  "id": "abcd",
+  "password": "********"
+}
+```
+
+응답 데이터 타입 및 예시:
+
+```ts
+interface ResponseValue {
+  accessToken: string // 사용자 접근 토큰
+  refreshToken: string // access token 발급용 토큰
+}
+```
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjlQS3I...(생략)",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjlQS3I...(생략)"
+}
+```
+
+### 인증 확인
+
+`id` 중복 체크를 합니다.
+
+```curl
+curl https://fastcampus-chat.net/auth/me
+  \ -X 'GET'
+  \ -H 'Authorization: Bearer <accessToken>'
+```
+
+요청 데이터 타입 및 예시:
+- 없음
+
+응답 데이터 타입 및 예시:
+
+```ts
+interface ResponseValue {
+  auth: boolean;
+  user?: User;
+}
+
+interface User {
+  id: string;
+  name: string;
+  picture: string;
+}
+```
+
+```json
+{
+  "auth": true,
+  "user": {
+    "id": "test1",
+    "name": "abcde",
+    "picture": "https://avatars.githubusercontent.com/u/42333366?v=4"    
+  }
+}
+```
+
+### 토큰 재발급
+
+```curl
+curl https://fastcampus-chat.net/refresh
+  \ -X 'POST'
+```
+
+요청 데이터 타입 및 예시:
+
+```ts
+interface RequestBody {
+  refreshToken: string // access token 발급용 토큰
+}
+```
+
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjlQS3I...(생략)"
+}
+```
+
+응답 데이터 타입 및 예시:
+
+```ts
+interface ResponseValue {
+  accessToken: string // 사용자 접근 토큰
+}
+```
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjlQS3I...(생략)",
+}
+```
+
+### 사용자 정보 수정
+
+- 프로필 이미지는 url or base64 형식이어야 합니다.
+- 프로필 이미지는 1MB 이하여야 합니다.
+
+```curl
+curl https://fastcampus-chat.net/user
+  \ -X 'PATCH'
+  \ -H 'Authorization: Bearer <accessToken>'
+```
+
+요청 데이터 타입 및 예시:
+
+```ts
+interface RequestBody {
+  name?: string // 새로운 표시 이름
+  picture?: string // 사용자 프로필 이미지(url or base64)
+}
+```
+
+```json
+{
+  "name": "abcde",
+  "picture": "https://avatars.githubusercontent.com/u/42333366?v=4"
+}
+```
+
+응답 데이터 타입 및 예시:
+
+```ts
+interface ResponseValue {
+  messgae: string
+}
+```
+
+```json
+{
+  "message": "User updated"
+}
+```
+
+## 채팅
+### 특정 유저 조회
+- 특정 유저를 조회합니다.
+```curl
+curl https://fastcampus-chat.net/user?userId=${userId}
+  \ -X 'GET'
+  \ -H 'Authorization: Bearer <accessToken>'
+```
+요청 데이터 타입 및 예시:
+- 없음
+- 조회하고 싶은 id는 query string으로 사용합니다.
+
+응답 데이터 타입 및 예시:
+```ts
+type ResponseValue = {
+  user: User;
+}
+
+interface User {
+  id: string;
+  name: string;
+  picture: string;
+}
+```
+
+```json
+{
+  "user": {
+    "id": "user1",
+    "name": "lgh",
+    "picture": "https://gravatar.com/avatar/c274467c5ef4fe381b154a20c5e7ce26?s=200&d=retro"
+  }
+}
+```
+
+### 모든 유저 조회
+- 현재 존재하는 모든 유저를 조회합니다.
+```curl
+curl https://fastcampus-chat.net/users
+  \ -X 'GET'
+  \ -H 'Authorization: Bearer <accessToken>'
+```
+요청 데이터 타입 및 예시:
+- 없음
+
+응답 데이터 타입 및 예시:
+```ts
+type ResponseValue = User[]
+
+interface User {
+  id: string;
+  name: string;
+  picture: string;
+}
+```
+
+```json
+[
+  {
+    "id": "user1",
+    "name": "lgh",
+    "picture": "https://gravatar.com/avatar/c274467c5ef4fe381b154a20c5e7ce26?s=200&d=retro"
+  },
+  {
+    "id": "user2",
+    "name": "ldj",
+    "picture": "https://gravatar.com/avatar/d94869409b4e94903723612a4f93a6f9?s=200&d=retro"
+   }
+]
+```
+
+### 채팅 생성하기
+
+```curl
+curl https://fastcampus-chat.net/chat
+  \ -X 'POST'
+  \ -H 'Authorization: Bearer <accessToken>'
+```
+
+요청 데이터 타입 및 예시:
+```ts
+interface RequestBody{
+  name: string, // chat 이름
+  users: string[], // 참가자들 id(자신 미포함)
+  isPrivate?: boolean // 공개 비공개
+}
+```
+
+```json
+{
+  "name": "test chat",
+  "users": ["user1", "user2"]
+}
+```
+
+응답 데이터 타입 및 예시:
+```ts
+interface ResponseValue {
+  id: string,
+  name: string,
+  users: User[], // 자신을 포함한 참가자들 정보
+  isPrivate: boolean,
+  updatedAt: Date
+}
+
+interface User {
+  id: string;
+  name: string;
+  picture: string;
+}
+```
+
+```json
+{
+  "id": "fasgadsfdsghssdlsdafasd",
+  "name": "test chat",
+  "users": [
+    {
+      "id": "user1",
+      "name": "lgh",
+      "picture": "https://gravatar.com/avatar/c274467c5ef4fe381b154a20c5e7ce26?s=200&d=retro"
+    },
+    {
+      "id": "user2",
+      "name": "ldj",
+      "picture": "https://gravatar.com/avatar/d94869409b4e94903723612a4f93a6f9?s=200&d=retro"
+     }
+  ],
+  "isPrivate": false,
+  "updatedAt": "2023-11-01T08:23:39.850Z"
+}
+```
+
+### 특정 채팅 조회
+- 특정 id의 채팅을 조회합니다.
+- isPrivate: true인 채팅방은 해당 채팅방 참가자만 볼 수 있습니다.
+
+```curl
+curl https://fastcampus-chat.net/chat/only?chatId=${chatId}
+  \ -X 'GET'
+  \ -H 'Authorization: Bearer <accessToken>'
+```
+
+요청 데이터 타입 및 예시:
+- 없음
+
+응답 데이터 타입 및 예시:
+```ts
+interface ResponseValue {
+  chat: Chat;
+}
+
+interface Chat {
+  id: string;
+  name: string;
+  users: User[]; // 속한 유저 정보
+  isPrivate: boolean;
+  latestMessage: Message | null;
+  updatedAt: Date;
+}
+
+interface User {
+  id: string;
+  name: string;
+  picture: string;
+}
+
+interface Message {
+  id: string;
+  text: string;
+  userId: string;
+  createAt: Date;
+}
+```
+
+```json
+{
+  chat: {
+    "id": "f189ab25-5644-4d72-bd7c-0170ee9c8ede",
+    "name": "chat room 1",
+    "users": [
+    {
+      "id": "user1",
+      "name": "lgh",
+      "picture": "https://gravatar.com/avatar/c274467c5ef4fe381b154a20c5e7ce26?s=200&d=retro"
+    },
+    {
+      "id": "user2",
+      "name": "ldj",
+      "picture": "https://gravatar.com/avatar/d94869409b4e94903723612a4f93a6f9?s=200&d=retro"
+    }
+    ],
+    "isPrivate": false,
+    "updatedAt": "2023-10-31T13:18:38.216Z",
+    "latestMessage": null
+  }
+}
+```
+
+### 모든 채팅 조회
+- 현재 존재하는 모든 채팅을 조회합니다.
+- isPrivate: true인 채팅방은 보이지 않습니다.
+
+```curl
+curl https://fastcampus-chat.net/chat/all
+  \ -X 'GET'
+  \ -H 'Authorization: Bearer <accessToken>'
+```
+
+요청 데이터 타입 및 예시:
+- 없음
+
+응답 데이터 타입 및 예시:
+```ts
+type ResponseValue = Chat[]
+
+interface Chat {
+  id: string;
+  name: string;
+  users: User[]; // 속한 유저 정보
+  isPrivate: boolean;
+  latestMessage: Message | null;
+  updatedAt: Date;
+}
+
+interface User {
+  id: string;
+  name: string;
+  picture: string;
+}
+
+interface Message {
+  id: string;
+  text: string;
+  userId: string;
+  createAt: Date;
+}
+```
+
+```json
+[
+  {
+    "id": "f189ab25-5644-4d72-bd7c-0170ee9c8ede",
+    "name": "chat room 1",
+    "users": [
+    {
+      "id": "user1",
+      "name": "lgh",
+      "picture": "https://gravatar.com/avatar/c274467c5ef4fe381b154a20c5e7ce26?s=200&d=retro"
+    },
+    {
+      "id": "user2",
+      "name": "ldj",
+      "picture": "https://gravatar.com/avatar/d94869409b4e94903723612a4f93a6f9?s=200&d=retro"
+    }
+  ],
+    "isPrivate": false,
+    "updatedAt": "2023-10-31T13:18:38.216Z",
+    "latestMessage": null
+  },
+  {
+    "id": "f189ab25-5644-4d72-bd7c-0170ee9c8edj",
+    "name": "chat room 2",
+    "users": [
+    {
+      "id": "user1",
+      "name": "lgh",
+      "picture": "https://gravatar.com/avatar/c274467c5ef4fe381b154a20c5e7ce26?s=200&d=retro"
+    },
+    {
+      "id": "user2",
+      "name": "ldj",
+      "picture": "https://gravatar.com/avatar/d94869409b4e94903723612a4f93a6f9?s=200&d=retro"
+    }
+  ],
+    "isPrivate": false,
+    "updatedAt": "2023-10-31T15:18:38.216Z",
+    "latestMessage": {
+      "id": "8f7f67bb-f1ab-4792-9678-0b8546adcb6f",
+      "text": "testtest444",
+      "userId": "test:test6",
+      "createdAt": "2023-11-06T11:15:50.588+00:00"
+    }
+  }
+]
+```
+
+### 나의 채팅 조회
+```curl
+curl https://fastcampus-chat.net/chat
+  \ -X 'GET'
+  \ -H 'Authorization: Bearer <accessToken>'
+```
+- 내가 속한 모든 채팅을 조회합니다.
+- isPrivate: true인 채팅방도 모두 보이게 됩니다.
+
+요청 데이터 타입 및 예시:
+- 없음
+
+응답 데이터 타입 및 예시:
+```ts
+type ResponseValue = Chat[]
+
+interface Chat {
+  id: string;
+  name: string;
+  users: User[]; // 속한 유저 id
+  isPrivate: boolean;
+  latestMessage: Message | null;
+  updatedAt: Date;
+}
+
+interface User {
+  id: string;
+  name: string;
+  picture: string;
+}
+
+interface Message {
+  id: string;
+  text: string;
+  userId: string;
+  createAt: Date;
+}
+```
+
+```json
+[
+  {
+    "id": "f189ab25-5644-4d72-bd7c-0170ee9c8ede",
+    "name": "chat room 1",
+    "users": [
+    {
+      "id": "user1",
+      "name": "lgh",
+      "picture": "https://gravatar.com/avatar/c274467c5ef4fe381b154a20c5e7ce26?s=200&d=retro"
+    },
+    {
+      "id": "user2",
+      "name": "ldj",
+      "picture": "https://gravatar.com/avatar/d94869409b4e94903723612a4f93a6f9?s=200&d=retro"
+    }
+  ],
+    "isPrivate": true,
+    "updatedAt": "2023-10-31T13:18:38.216Z",
+    "latestMessage": null
+  },
+  {
+    "id": "f189ab25-5644-4d72-bd7c-0170ee9c8edj",
+    "name": "chat room 2",
+    "users": [
+      {
+        "id": "user1",
+        "name": "lgh",
+        "picture": "https://gravatar.com/avatar/c274467c5ef4fe381b154a20c5e7ce26?s=200&d=retro"
+      },
+      {
+        "id": "user2",
+        "name": "ldj",
+        "picture": "https://gravatar.com/avatar/d94869409b4e94903723612a4f93a6f9?s=200&d=retro"
+      }
+    ],
+    "isPrivate": false,
+    "updatedAt": "2023-10-31T15:18:38.216Z",
+    "latestMessage": {
+      "id": "8f7f67bb-f1ab-4792-9678-0b8546adcb6f",
+      "text": "testtest444",
+      "userId": "test:test6",
+      "createdAt": "2023-11-06T11:15:50.588+00:00"
+    }
+  }
+]
+```
+
+## 채팅 참여하기
+
+```curl
+curl https://fastcampus-chat.net/chat/participate
+  \ -X 'PATCH'
+  \ -H 'Authorization: Bearer <accessToken>'
+```
+
+요청 데이터 타입 및 예시:
+```ts
+interface RequestBody {
+  chatId: string;
+}
+```
+
+```json
+{
+  "chatId": "f189ab25-5644-4d72-bd7c-0170ee9c8ede"
+}
+```
+
+응답 데이터 타입 및 예시:
+```ts
+interface ResponseValue{
+  id: string;
+  name: string;
+  users: User[]; // 속한 유저 id
+  isPrivate: boolean;
+  updatedAt: Date;
+}
+
+interface User {
+  id: string;
+  name: string;
+  picture: string;
+}
+```
+
+```json
+{
+  "id": "f189ab25-5644-4d72-bd7c-0170ee9c8ede",
+  "name": "chat room 1",
+  "users": [
+    {
+      "id": "user1",
+      "name": "lgh",
+      "picture": "https://gravatar.com/avatar/c274467c5ef4fe381b154a20c5e7ce26?s=200&d=retro"
+    },
+    {
+      "id": "user2",
+      "name": "ldj",
+      "picture": "https://gravatar.com/avatar/d94869409b4e94903723612a4f93a6f9?s=200&d=retro"
+    }
+  ],
+  "isPrivate": true,
+  "updatedAt": "2023-10-31T13:18:38.216Z"
+}
+```
+
+## 채팅 나가기
+
+```curl
+curl https://fastcampus-chat.net/chat/leave
+  \ -X 'PATCH'
+  \ -H 'Authorization: Bearer <accessToken>'
+```
+
+요청 데이터 타입 및 예시:
+```ts
+interface RequestBody {
+  chatId: string;
+}
+```
+
+```json
+{
+  "chatId": "f189ab25-5644-4d72-bd7c-0170ee9c8ede"
+}
+```
+
+응답 데이터 타입 및 예시:
+```ts
+interface ResponseValue {
+  message: string;
+}
+```
+
+```json
+{
+  "message": "Leave success"
+}
+```
+
+## 채팅 초대하기
+
+```curl
+curl https://fastcampus-chat.net/chat/invite
+  \ -X 'PATCH'
+  \ -H 'Authorization: Bearer <accessToken>'
+```
+
+요청 데이터 타입 및 예시:
+```ts
+interface RequestBody {
+  chatId: string;
+  users: string[]; // 초대할 유저 id
+}
+```
+
+```json
+{
+  "chatId": "f189ab25-5644-4d72-bd7c-0170ee9c8ede",
+  "users": ["user1", "user2"]
+}
+```
+
+응답 데이터 타입 및 예시:
+```ts
+interface ResponseValue{
+  id: string;
+  name: string;
+  users: User[]; // 속한 유저 정보
+  isPrivate: boolean;
+  updatedAt: Date;
+}
+
+interface User {
+  id: string;
+  name: string;
+  picture: string;
+}
+```
+
+```json
+{
+  "id": "f189ab25-5644-4d72-bd7c-0170ee9c8ede",
+  "name": "chat room 1",
+  "users": [
+    {
+      "id": "user1",
+      "name": "lgh",
+      "picture": "https://gravatar.com/avatar/c274467c5ef4fe381b154a20c5e7ce26?s=200&d=retro"
+    },
+    {
+      "id": "user2",
+      "name": "ldj",
+      "picture": "https://gravatar.com/avatar/d94869409b4e94903723612a4f93a6f9?s=200&d=retro"
+    }
+  ],
+  "isPrivate": true,
+  "updatedAt": "2023-10-31T13:18:38.216Z"
+}
+```
+
+# Socket
+- socket.io 의 사용을 추천드립니다.
+- Socket 연결시에도 headers는 유지해야 합니다.
+## 기본 연결
+```ts
+io(`https://fastcampus-chat.net/chat?chatId=${chatId}`,
+  {
+    extraHeaders: {
+      Authorization: "Bearer <accessToken>",
+      serverId: "test",
+    },
+  })
+```
+
+## emit Event(client -> server)
+### example
+```ts
+socket.emit('message-to-server', text)
+```
+### message-to-server
+- 같은 방에 있는 사람들에게 메세지를 전달합니다.
+
+요청 데이터
+```ts
+type RequestData: string;
+```
+### fetch-messages
+- 이전 대화 목록을 불러옵니다.
+- `messages-to-client`로 데이터를 받을 수 있습니다.
+
+요청 데이터
+- 없음
+### users
+- 접속 상태인 유저 목록을 불러옵니다.
+- `users-to-client`로 데이터를 받을 수 있습니다.
+
+요청 데이터
+- 없음 
+
+## on Event(server -> client)
+### example
+```ts
+socket.on('message-to-client', (messageObject) => {
+  console.log(messageObject);
+})
+```
+### message-to-client
+- 같은 방에 있는 사람들에게 메세지를 전달합니다.
+
+응답 데이터
+```ts
+interface ResponseData {
+  id: string;
+  text: string;
+  userId: string; // 메세지를 보낸 사람의 id
+  createdAt: Date;
+}
+```
+### messages-to-client
+- 이전 대화 목록을 불러옵니다.
+
+응답 데이터
+```ts
+interface Message {
+  id: string;
+  text: string;
+  userId: string; // 메세지를 보낸 사람의 id
+  createdAt: Date;
+}
+
+interface ResponseData {
+  messages: Message[];
+}
+```
+### join
+- 같은 방에 새로운 사람이 들어오면 모든 유저의 정보를 다시 받습니다.
+
+응답 데이터
+```ts
+interface ResponseData {
+  users: string[]; // 참여자들 id
+  joiners: string[]; // 새로운 참여자 id
+}
+```
+### leave
+- 같은 방에 사람이 나가면 모든 유저의 정보를 다시 받습니다.
+
+응답 데이터
+```ts
+interface ResponseData {
+  users: string[]; // 참여자들 id
+  leaver: string; // 나간 사용자 id
+}
+```
+
+### users-to-client
+- 접속 상태인 유저 목록을 불러옵니다.
+
+응답 데이터
+```ts
+interface ResponseData {
+  user: string[]; // 참가자들 id
+}
+```
+
+## server 연결
+```ts
+io(`https://fastcampus-chat.net/server`,
+  {
+    extraHeaders: {
+      Authorization: "Bearer <accessToken>",
+      serverId: "test",
+    },
+  })
+```
+
+## emit Event(client -> server)
+### example
+```ts
+socket.emit('users-server')
+```
+### users-server
+- 같은 serverId를 사용하는 online 사용자를 불러옵니다.
+- `users-server-to-client`로 데이터를 받을 수 있습니다.
+
+요청 데이터
+- 없음
+
+## on Event(server -> client)
+### example
+```ts
+socket.on('message-to-client', (messageObject) => {
+  console.log(messageObject);
+})
+```
+
+### users-server-to-client
+- 같은 serverId를 사용하는 접속 상태인 유저 목록을 불러옵니다.
+
+응답 데이터
+```ts
+interface ResponseData {
+  user: string[]; // 참가자들 id
+}
+```
+
+### invite
+- 새로운 채팅방 생성시 해당 채팅방 유저에게 채팅방 정보를 전송합니다.
+- 기존 채팅방에 유저 초대시 초대된 유저에게 채팅방 정보를 전송합니다.
+
+응답 데이터
+```ts
+interface ResponseData {
+  id: string;
+  name: string;
+  users: string[]; // 참여자들 id
+  isPrivate: boolean;
+  updatedAt: Date;
+}
+```
+
+### new-chat
+- 새로운 대화방이 생긴 경우 (not private) 서버(팀에서 사용하는 serverId)의 참여자들에게 이를 전달합니다.
+
+응답 데이터
+```ts
+interface ResponseData {
+  id: string;
+  name: string;
+  users: string[]; // 참여자들 id
+  isPrivate: boolean;
+  updatedAt: Date;
+}
+```
